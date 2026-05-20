@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -304,9 +305,10 @@ async function persistData(){
   setSyncStatus('SAVING...','saving');
   try {
     const payload = JSON.stringify({dw:state.dw.data,pl:state.pl.data,pt:state.pt.data,estimators:estimatorList});
-    const form = new FormData();
-    form.append('data', payload);
-    const res = await fetch(API_URL, {method:'POST', body: form});
+    
+    
+    const encoded = 'data=' + encodeURIComponent(payload);
+    const res = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: encoded});
     const result = await res.json();
     if(result.ok){ setSyncStatus('SAVED ✓','saved'); setTimeout(()=>setSyncStatus('LIVE','saved'),2000); }
     else setSyncStatus('SAVE FAILED: '+(result.error||'unknown'),'error');
