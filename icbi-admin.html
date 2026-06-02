@@ -67,7 +67,10 @@ body { background: var(--bg); color: var(--text); font-family: 'Barlow', sans-se
 .cell { padding: 4px 3px; font-size: 11px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; }
 .cell.job-name { white-space: normal; line-height: 1.3; font-size: 11px; font-weight: 500; }
 .cell.submitted-to { font-size: 10px; color: #1A2535; font-weight: 500; }
-.cell.bid-due { font-size: 10px; color: var(--text-dim); }
+.cell.bid-due { font-size: 10px; color: var(--text-dim); position: relative; }
+.date-display { font-size: 10px; color: var(--text-dim); cursor: pointer; padding: 2px 3px; border-radius: 3px; border: 1px solid transparent; width: 100%; transition: border-color 0.15s, background 0.15s; }
+.date-display.editable:hover { border-color: var(--border); background: #fff; color: var(--text); }
+.date-input { font-size: 10px; color: var(--text); background: #fff; border: 1px solid var(--dw-mid); border-radius: 3px; padding: 2px 3px; width: 100%; outline: none; display: none; }
 .cell.estimator { font-size: 10px; color: var(--text-dim); }
 .cell.actions { justify-content: center; }
 .cell.amount { position: relative; justify-content: flex-end; }
@@ -379,7 +382,7 @@ function renderTrade(trade){
       `<div class="cell job-name">${esc(r.job)||'–'}</div>`+
       `<div class="cell submitted-to" title="${esc(r.submitted_to)}">${esc(r.submitted_to)||'–'}</div>`+
       `<div class="cell estimator" title="${esc(r.estimator)}">${esc(estShort)}</div>`+
-      `<div class="cell bid-due">${fmtDate(r.bid_due)}</div>`+
+      `<div class="cell bid-due"><span class="date-display editable" onclick="startEditDate(event,'${esc(trade)}','${esc(r.id)}')" title="Click to edit">${fmtDate(r.bid_due)}</span><input class="date-input" type="date" data-trade="${esc(trade)}" data-id="${esc(r.id)}" onblur="commitDate(this)" onkeydown="dateKey(event,this)" value="${esc(r.bid_due)}"></div>`+
       `<div class="cell amount"><span class="amount-display ${amtEditable}" ${amtClick}>${fmtAmt(r.bid_amount)}</span>`+
       (IS_ADMIN?`<input class="amount-input" type="number" data-trade="${esc(trade)}" data-id="${esc(r.id)}" onblur="commitAmount(this)" onkeydown="amountKey(event,this)" value="${esc(r.bid_amount)}">`:'')+
       `</div><div class="cell actions">${delBtn}</div>`;
@@ -402,6 +405,19 @@ async function commitAmount(input){
   renderTrade(trade);
 }
 function amountKey(e,input){if(e.key==='Enter')input.blur();if(e.key==='Escape')renderTrade(input.dataset.trade);}
+function startEditDate(e,trade,id){
+  if(!IS_ADMIN)return; e.stopPropagation();
+  const cell=e.currentTarget.parentElement;
+  cell.querySelector('.date-display').style.display='none';
+  const inp=cell.querySelector('.date-input'); inp.style.display='block'; inp.focus();
+}
+async function commitDate(input){
+  const trade=input.dataset.trade,id=input.dataset.id;
+  const record=state[trade].data.find(r=>r.id===id);
+  if(record){record.bid_due=input.value; await persistData();}
+  renderTrade(trade);
+}
+function dateKey(e,input){if(e.key==='Enter')input.blur();if(e.key==='Escape')renderTrade(input.dataset.trade);}
 function sortTrade(trade,col){
   const s=state[trade]; s.dir=(s.sort===col)?s.dir*-1:1; s.sort=col;
   ['status','job','submitted_to','estimator','bid_due','bid_amount'].forEach(c=>{
